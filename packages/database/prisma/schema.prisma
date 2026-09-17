@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String               @id @default(uuid())
+  createdAt       DateTime             @default(now())
+  name            String
+  username        String               @unique
+  password        String
+  bio             String?
+  messages        Message[]
+  sentRequest     ChatRequest[]        @relation("Sent")
+  receivedRequest ChatRequest[]        @relation("Received")
+  conversation    ConversationMember[]
+}
+
+model ReservedUsername {
+  id       String  @id @default(uuid(7))
+  username String  @unique
+  reason   String?
+}
+
+model ChatRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     Status   @default(PENDING)
+  createdAt  DateTime @default(now())
+  sender     User     @relation("Sent", fields: [senderId], references: [id])
+  receiver   User     @relation("Received", fields: [receiverId], references: [id])
+}
+
+model Conversation {
+  id        String               @id @default(uuid())
+  type      Type                 @default(DM)
+  createdAt DateTime             @default(now())
+  message   Message[]
+  member    ConversationMember[]
+}
+
+model ConversationMember {
+  conversationId String       @default(uuid())
+  userId         String
+  role           Role         @default(ADMIN)
+  joinedAt       DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@id([userId, conversationId])
+}
+
+model Message {
+  id             String   @id @default(uuid(7))
+  senderId       String
+  conversationId String
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  converstation Conversation @relation(fields: [conversationId], references: [id])
+  sender        User         @relation(fields: [senderId], references: [id])
+}
+
+enum Type {
+  DM
+  GROUP
+  CHANNEL
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum Status {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
