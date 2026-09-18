@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 const router: Router = Router();
 
-router.post("/rooms", (req, res) => {
+router.post("/", (req, res) => {
 
 })
 
