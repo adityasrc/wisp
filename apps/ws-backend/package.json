@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -b",
     "start": "node dist/index.js",
-    "dev": "pnpm run build && pnpm run start",
+    "dev": "tsx watch src/index.ts",
+    "check-types": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,9 +15,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@repo/db": "workspace:*",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1"
+    "@types/node": "26.4.1",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.13"
   }
 }

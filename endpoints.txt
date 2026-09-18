@@ -1,0 +1,51 @@
+REST
+├── Auth
+│   ├── POST   /api/auth/signup
+│   ├── POST   /api/auth/login
+│   └── POST   /api/auth/logout
+│
+├── Users
+│   ├── GET    /api/users/me
+│   ├── PATCH  /api/users/me/username
+│   └── GET    /api/users/search?q=username
+│
+├── Requests
+│   ├── POST   /api/requests
+│   ├── GET    /api/requests/incoming
+│   ├── GET    /api/requests/outgoing
+│   ├── POST   /api/requests/:id/accept
+│   └── POST   /api/requests/:id/reject
+│
+├── Conversations
+│   ├── GET    /api/conversations
+│   └── GET    /api/conversations/:id
+│
+└── Message History / Edit
+    ├── GET    /api/conversations/:id/messages
+    └── PATCH  /api/messages/:id
+
+
+
+WebSocket
+└── WS /ws
+    │
+    ├── Client → Server
+    │   ├── message:send
+    │   ├── message:edit
+    │   ├── request:send
+    │   └── request:respond
+    │
+    └── Server → Client
+        ├── message:new
+        ├── message:edited
+        ├── message:expired
+        ├── request:received
+        ├── request:accepted
+        └── conversation:reactivated
+
+
+
+Background Jobs
+├── expireOldUsernames()
+├── markDormantConversations()
+└── expireSensitiveMessages()

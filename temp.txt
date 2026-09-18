@@ -1,0 +1,683 @@
+signup
+→ unique username
+→ search username
+→ send chat request
+→ accept
+→ DM starts
+
+Wisp
+├── Username-based accounts
+├── Chat requests
+├── DMs
+├── Groups
+├── Invite links
+├── Simple channels
+└── Optional message expiry
+
+
+Quick Architecture SummaryEntityRecommended ID TypeReasonUser IDUUID v4Prevents user tracking and account enumeration.Channel / Group IDUUID v4Keeps URL/API endpoints random and secure.DM Room IDUUID v4 (or User ID Hash)Ensures strict privacy between two individuals.All Messages (DM, Group, Channel)UUID v7Crucial for database scaling, indexing, and chronological sorting.
+
+1. Chat Requests with expiry
+Request 7 days tak accept nahi hui → automatically expire.
+
+One-way first message
+Unknown user ko request ke saath sirf one message bhejne do. Spam control + interesting UX.
+
+Username history
+Username change kar sakta hai, but previous username immediately reusable nahi hota. Thoda identity integrity ka angle. maybe 14 days gap
+
+
+
+
+Haan, ab tak **Wisp ke product ideas** ka short summary ye hai:
+
+### Wisp: Core Idea
+
+Privacy/anonymity-oriented chat app, **phone-number based nahi**, username-based identity.
+
+### Account & Identity
+
+* Fast signup, minimal personal information.
+* Unique **username-based identity**.
+* Username search karke kisi ko chat request bhej sakte hain.
+* Unknown user ko request ke saath **sirf one first message** bhejne ki permission.
+* Request accept hone ke baad DM conversation start.
+* Username change possible, but username ko immediately recycle nahi kiya jayega.
+* Previous username ko **14 days tak reserve** rakha jayega so user can reclaim it.
+* Username changes par some limit/window ho sakti hai, exact policy later decide karenge.
+* Ek **permanent hidden identity** hogi jo normal user ko visible nahi hogi, but platform admins abuse/law violations mein account ko track kar sakein even after username changes.
+
+### Conversations
+
+* **DM**
+* **Groups**
+* **Channels**
+* Groups mein existing connections ko add karna ya invite links se join karna.
+* Channels ko later define/expand kar sakte hain.
+
+### Messaging Philosophy
+
+* Message bhejne ke baad **15 minutes tak edit** kar sakte ho.
+* Uske baad message immutable.
+* **Delete philosophy intentionally restrictive**: abhi decide nahi kiya hai whether deletion completely disallowed hoga ya koi limited form hoga.
+* **Read receipts nahi honge.** Jab tak saamne wala reply nahi karta, message ko seen-status ke through expose nahi kiya jayega.
+
+### Overall Product Direction
+
+Wisp ka differentiation random features se nahi, balki **privacy-first identity + stricter message/history rules + lightweight communication model** se aayega.
+
+Abhi intentionally scope open rakhenge, aur naye features baad mein add honge jab base system ready ho.
+
+
+Fair, valid catch — maine apna generic "v1 chat app" plan de diya bina tumhare actual feature spec (username identity, request-based first message, 14-day recycle, hidden identity, 15-min edit window, no read receipts) ko properly incorporate kiye. Galti meri hai, fix karta hoon.
+
+Chalo tumhare **exact spec** ko practice-scoped v1 mein map karte hain — bina feature drop kiye, bas complexity ko phases mein todke.
+
+## Wisp v1 — tumhare spec ke hisaab se, practice-friendly scope
+
+**Identity & Account**
+- Signup: username + password (minimal info — email optional/skip for now)
+- Username uniqueness check
+- Hidden permanent internal ID (UUID, admin-only visibility) — yeh day 1 se schema mein rakhna easy hai, feature abhi use nahi hoga but foundation ready rahega
+
+**Connection model**
+- Username search
+- Chat request bhejna → sirf **one message** allowed until accepted
+- Recipient accept kare to hi full DM thread khule
+- Reject/ignore state bhi
+
+**Messaging rules**
+- Message bheja → 15 min tak edit allowed (timestamp check, phir lock)
+- Delete abhi **v1 mein skip** karte hain (jaisa tumne khud bola tha "abhi decide nahi kiya") — yeh sahi bhi hai, kyunki undecided policy ko code mein force karna galat hoga
+- No read receipts — bas "delivered" tak track karo, "seen" nahi
+
+**Username change + recycle**
+- Username change allowed
+- Old username 14 din "reserved" table mein rahe (background job/cron check karega expiry)
+
+**Conversations**
+- DM only in v1 — **Groups/Channels v2 mein** (yeh genuinely scope-heavy hai, ek saath sab karne se v1 kabhi complete nahi hoga)
+
+## Stack mapping (tumhara core stack, natural fit)
+
+| Feature | Stack piece |
+|---|---|
+| Auth, username uniqueness | Node API + Postgres |
+| Chat request → accept flow | Postgres state machine (pending/accepted/rejected) |
+| Real-time message delivery | WebSockets |
+| 15-min edit window | Postgres timestamp check + simple cron/interval for lock |
+| Username recycle (14 days) | Postgres table + scheduled job (node-cron, no Redis needed yet) |
+| Dashboard/chat UI | Next.js + React |
+| Structure | pnpm monorepo — `apps/web`, `apps/server`, `packages/shared` (types for message/request events) |
+
+## Yeh v2+ mein jaayega (abhi scope mein nahi, but plan mein clear rahega)
+- Groups/Channels
+- Redis (jab scale/multi-instance test karoge)
+- E2E encryption (bada undertaking, alag se seriously plan karna padega agar chahiye)
+- Delete policy (jab decide ho jaaye)
+
+Yeh scope theek lag raha hai? Confirm karo to Postgres schema (users, usernames_history, chat_requests, messages) design karke scaffold shuru karta hoon.
+
+
+
+
+
+
+## Wisp: Building Reference
+
+### Core purpose
+
+Wisp is a **privacy/anonymity-oriented chat application** built primarily as a **learning and muscle-memory project**.
+
+The real goal is not to build a massive messaging product. The goal is to repeatedly practice:
+
+**Next.js/React + TypeScript → Node/Express → HTTP → WebSockets → PostgreSQL → pnpm monorepo**
+
+Implementation is done **without AI assistance**. AI/external help is allowed for concepts, theory, and clarification. The project should naturally become complete through the implementation practice.
+
+---
+
+# 1. Identity & Account
+
+Wisp is **username-first**, not phone-number based.
+
+### Signup
+
+Minimal onboarding:
+
+* Username
+* Password
+
+No mandatory phone number or email.
+
+The idea is that Wisp does **not try to prove that someone is a real-world person**. The platform only needs to know that an account controls its credentials.
+
+### Username
+
+* Must be unique.
+* Certain usernames are permanently reserved.
+* User can change username.
+* Previous username remains reserved for **14 days**, giving the old owner a chance to reclaim it.
+* Username-change frequency/policy can be refined later.
+
+### Hidden permanent identity
+
+Every user has a permanent internal identity that:
+
+* never changes
+* is not exposed to normal users
+* is available to the platform/admin for abuse tracking
+
+This allows a user to change usernames without losing platform-level accountability.
+
+---
+
+# 2. Discovery & Connection
+
+Users discover each other through **username search**.
+
+### Chat request
+
+Unknown users cannot immediately start a conversation.
+
+Flow:
+
+```text
+Search @username
+      ↓
+Send chat request
+      ↓
+Optional first message
+      ↓
+Recipient accepts / rejects / ignores
+      ↓
+If accepted → normal DM conversation
+```
+
+### One-message rule
+
+Before the request is accepted:
+
+> **Only one message can be sent with the request.**
+
+No repeated messaging or spam before permission is granted.
+
+This is one of Wisp's core product principles:
+
+**permission before conversation.**
+
+---
+
+# 3. Conversations
+
+The base conversation model is unified.
+
+One `Conversation` concept can represent:
+
+* **DM**
+* **Group**
+* **Channel**
+
+The exact distinction comes from the conversation type/behavior rather than creating completely separate systems.
+
+### V1 practical rollout
+
+Initial focus:
+
+**DM first**
+
+Groups and channels can be introduced once the core system is stable.
+
+### Groups
+
+Later:
+
+* Add existing connections
+* Invite through shareable links
+* Membership/roles
+
+### Channels
+
+Later:
+
+* Broadcast-oriented conversation
+* Different posting permissions
+
+---
+
+# 4. Messaging Philosophy
+
+Wisp intentionally has stricter message rules than typical chat apps.
+
+### Edit
+
+A sent message can be edited for **15 minutes**.
+
+After that:
+
+> **Message becomes immutable.**
+
+### Delete
+
+No final deletion policy yet.
+
+Current position:
+
+> **Do not implement deletion until the policy is explicitly decided.**
+
+The product philosophy is leaning toward preserving message history rather than allowing unrestricted deletion.
+
+### Read receipts
+
+**No read receipts.**
+
+There is no "Seen" pressure.
+
+We may track delivery internally, but users do not get the usual seen/read indicator.
+
+Core idea:
+
+> Until the recipient responds, the sender does not get a "seen" signal.
+
+---
+
+# 5. Product Differentiation
+
+Wisp is **not trying to win by having more features than WhatsApp/Telegram**.
+
+Its identity is:
+
+### Privacy + identity control + low-pressure communication
+
+Important existing differentiators:
+
+* username-first identity
+* no phone-number-based discovery
+* chat requests
+* one-message-before-acceptance rule
+* recyclable usernames with a 14-day reclaim window
+* hidden permanent platform identity
+* no read receipts
+* controlled editing
+* stricter message-history philosophy
+
+---
+
+# 6. Additional Differentiators for V1
+
+Two ideas were selected because they add interesting behavior without blowing up the scope.
+
+## A. Dormant Connections
+
+A connection can become **dormant** after a prolonged period of inactivity.
+
+The exact inactivity period/policy is to be decided later.
+
+Purpose:
+
+* avoid permanently accumulating dead conversations/connections
+* make the connection model more intentional
+
+This should remain relatively lightweight.
+
+## B. Message Lifespan
+
+Messages can eventually have an optional lifespan/purpose.
+
+Potential idea:
+
+```text
+Normal      → regular message
+Sensitive   → expires after selected period
+Important   → permanent
+```
+
+The exact UX/rules are still open.
+
+This is a **later V1 feature**, not something to overdesign immediately.
+
+---
+
+# 7. Deferred V2 Idea
+
+## Context-scoped identity / Multi-persona
+
+A user could maintain multiple public personas/usernames while retaining one hidden permanent identity underneath.
+
+Example:
+
+```text
+Permanent identity
+        │
+   ┌────┴────┐
+   ↓         ↓
+Work persona  Casual persona
+```
+
+This is intentionally **V2**.
+
+Reason:
+
+It is highly interesting and potentially one of Wisp's strongest differentiators, but it affects the fundamental data model:
+
+* messages
+* requests
+* memberships
+* conversation identity
+* permissions
+
+So adding it now risks turning the learning project into a huge architecture exercise.
+
+**Keep the idea parked, not discarded.**
+
+---
+
+# 8. Current Stack
+
+### Monorepo
+
+```text
+wisp/
+├── apps/
+│   ├── web/
+│   ├── http-backend/
+│   └── ws-backend/
+│
+├── packages/
+│   └── database/
+│
+├── package.json
+├── pnpm-workspace.yaml
+└── turbo.json
+```
+
+Using **pnpm + Turborepo**.
+
+### Frontend
+
+* Next.js
+* React
+* TypeScript
+
+### HTTP backend
+
+* Node.js
+* Express
+* TypeScript
+
+### WebSocket backend
+
+* Node.js
+* `ws`
+* TypeScript
+
+The HTTP and WebSocket backends are separate applications.
+
+### Database
+
+* PostgreSQL
+* Prisma 7.10.0
+
+### Later possibilities
+
+* Redis
+* background jobs
+* more infrastructure
+
+**Do not add Redis just because a chat app can use Redis.** Add it when a real requirement emerges, such as scaling WebSockets, Pub/Sub, presence, or rate limiting.
+
+---
+
+# 9. HTTP vs WebSocket responsibility
+
+Important architecture rule:
+
+### HTTP
+
+Use for things like:
+
+* signup
+* login
+* username search
+* chat requests
+* conversation history
+* profile/settings
+* other CRUD operations
+
+### WebSocket
+
+Use for realtime events:
+
+* incoming messages
+* message delivery
+* connection status
+* realtime conversation events
+
+So:
+
+```text
+HTTP  → "Give me the messages."
+WS    → "A new message just arrived."
+```
+
+The WebSocket backend still uses an underlying HTTP server because the WebSocket connection starts through an HTTP Upgrade/handshake.
+
+For the current separate WS backend, a simple:
+
+```ts
+new WebSocketServer({ port })
+```
+
+is fine initially.
+
+---
+
+# 10. Initial Core Entities
+
+Current conceptual entities:
+
+```text
+User
+ReservedUsername
+
+ChatRequest
+
+Conversation
+ConversationMember
+
+Message
+```
+
+### User
+
+Minimum conceptual data:
+
+```text
+id
+username
+passwordHash
+createdAt
+updatedAt
+```
+
+The permanent internal identity is the `id`.
+
+### ReservedUsername
+
+Used for protected/reserved names.
+
+### ChatRequest
+
+Represents:
+
+```text
+sender
+receiver
+status
+createdAt
+```
+
+Possible statuses:
+
+```text
+pending
+accepted
+rejected
+```
+
+Ignore/expiry can be decided later.
+
+### Conversation
+
+One conversation entity that can represent:
+
+```text
+DM
+GROUP
+CHANNEL
+```
+
+### ConversationMember
+
+Represents which users belong to a conversation.
+
+### Message
+
+Core concepts:
+
+```text
+conversation
+sender
+content
+createdAt
+updatedAt
+```
+
+Additional message behavior can be added later.
+
+---
+
+# 11. Development Philosophy
+
+This is extremely important.
+
+The project should **not become another huge side project**.
+
+Every feature should answer:
+
+> **Does building this help me practice the stack?**
+
+If yes, build it.
+
+If it only makes the product look fancy, defer it.
+
+### Current priority
+
+```text
+Muscle memory
+    ↓
+Concept reinforcement
+    ↓
+Project progress
+    ↓
+Product differentiation
+```
+
+Not the other way around.
+
+---
+
+# 12. AI Rule
+
+For implementation:
+
+**No AI-generated code.**
+
+You write the code yourself.
+
+AI/external resources are allowed for:
+
+* theory
+* concepts
+* architecture discussion
+* documentation clarification
+* understanding errors
+* explaining something you genuinely don't understand
+
+But not:
+
+> "Write this feature for me."
+
+The objective is that after building Wisp, you can look back at Verdict, Flowboard and Snip and recognize the patterns because **you implemented them yourself**.
+
+---
+
+# 13. Current build strategy
+
+Do **not** build the app in isolated phases like:
+
+> React for a week → Node for a week → WebSockets later.
+
+Instead, use an **interleaved daily practice loop**:
+
+```text
+TypeScript / JS
+      ↓
+React / Next
+      ↓
+HTTP / Express
+      ↓
+WebSocket
+      ↓
+PostgreSQL
+```
+
+Each day touches a little of each.
+
+That way the goal is not just project progress. It continuously reinforces the entire stack.
+
+---
+
+# 14. Current Scope Boundary
+
+### V1
+
+Core:
+
+* username/password signup
+* username uniqueness
+* reserved usernames
+* username search
+* chat request
+* one first message with request
+* accept/reject flow
+* DM
+* WebSocket messaging
+* PostgreSQL persistence
+* 15-minute message editing
+* no read receipts
+* hidden permanent identity
+* username reclaim window
+* dormant connections
+* message lifespan, once the core is stable
+
+### Later / V2
+
+* Groups
+* Channels
+* Redis
+* E2E encryption
+* Final delete policy
+* Multi-persona identity
+
+---
+
+## Wisp's current product philosophy
+
+> **A low-pressure, privacy-oriented communication app where people are identified by usernames rather than phone numbers, conversations require permission, identity can change publicly without losing platform accountability, and messaging isn't built around read-pressure or unrestricted history manipulation.**
+
+And the project's bigger purpose remains:
+
+> **Build it yourself, understand what you're building, and use it to make yourself less dependent on AI-generated code.**
+
+This is the reference plan. Anything we add later should be judged against this scope first.
