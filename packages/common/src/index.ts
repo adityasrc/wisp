@@ -18,7 +18,12 @@ export const requestSchema = z.object({
     message: z.string().min(2, "Message must be at least of 2 characters").max(250, "Message cannot exceed 250 characters").optional(),
 })
 
+export const editMessageSchema = z.object({
+    content: z.string().min(1, "Message cannot be empty").max(2000, "Message cannot exceed 2000 characters").trim(),
+});
+
 export type SignupSchema = z.infer<typeof signupSchema>;
 export type LoginSchema = z.infer<typeof loginSchema>;
 export type UpdateUsernameSchema = z.infer<typeof updateUsernameSchema>;
-export type RequestSchema = z.infer<typeof requestSchema>
+export type RequestSchema = z.infer<typeof requestSchema>;
+export type EditMessageSchema = z.infer<typeof editMessageSchema>;

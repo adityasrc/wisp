@@ -97,6 +97,48 @@ export class ConversationService {
             lastActivityAt: chats.lastActivityAt,
             isDormant: chats.isDormant,
             partnerMember: partnerMember?.user || null,
+        };
+    }
+
+    static async getMessages(conversationId: string, userId: string, cursor?: string, limit: number = 20) {
+
+        const checkMember = await prisma.conversation.findFirst({
+            where: {
+                id: conversationId,
+                member: { some: { userId: userId } },
+            },
+
+        })
+
+        if (!checkMember) {
+            throw new AppError(401, "Unauthorized");
         }
+
+        const messages = await prisma.message.findMany({
+            where: {
+                conversationId: conversationId,
+                OR: [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } }
+                ],
+            },
+            take: limit,
+            // only pass cursor & skip if cursor exists (skip: 1 avoids fetching cursor message again)
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            orderBy: { createdAt: "desc" },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        avatarType: true,
+                        avatarUrl: true,
+                    }
+                }
+            }
+        });
+
+        return messages;
     }
 }
