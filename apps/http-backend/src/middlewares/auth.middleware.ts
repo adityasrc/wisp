@@ -1,7 +1,7 @@
 import { jwtVerify } from "jose";
 import type { NextFunction, Request, Response } from "express";
 
-export const middleware = async function (req: Request, res: Response, next: NextFunction) {
+export const authMiddleware = async function (req: Request, res: Response, next: NextFunction) {
 
     try {
 

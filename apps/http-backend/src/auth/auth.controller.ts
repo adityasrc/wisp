@@ -89,4 +89,14 @@ export class AuthController {
             }
         });
     }
+
+    static async logout(req: Request, res: Response) {
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+        });
+
+        return res.status(200).json({ message: "Logged out successfully" });
+    }
 }

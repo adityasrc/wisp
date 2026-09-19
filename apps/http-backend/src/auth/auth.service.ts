@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import { type User, prisma } from "@repo/db";
 import { SignJWT } from "jose";
+import { AppError } from "../utils/AppError.js";
 
 
 export class AuthService {
@@ -13,44 +14,36 @@ export class AuthService {
     }
 
     static async verifyPassword(password: string, hash: string): Promise<boolean> {
-        try {
-            const isMatch = await bcrypt.compare(password, hash);
-            return isMatch;
-        } catch (err) {
-            console.log(err);
-            return false;
-        }
+        return await bcrypt.compare(password, hash);
     }
+
     static async userExist(username: string): Promise<boolean> {
-        try {
-            const user = await prisma.user.findUnique({
-                where: { username },
-                select: { id: true }
-            });
-            return !!user;
-        } catch (err) {
-            console.log(err);
-            return false;
-        }
+        const user = await prisma.user.findUnique({
+            where: { username },
+            select: { id: true }
+        });
+        if (user) return true;
+
+        const reserved = await prisma.reservedUsername.findFirst({
+            where: {
+                username,
+                expiresAt: { gt: new Date() }
+            }
+        });
+        return !!reserved;
     }
 
     static async getUser(username: string): Promise<User | null> {
-        try {
-            const user = await prisma.user.findUnique({
-                where: {
-                    username: username
-                }
-            });
-            return user;
-        } catch (err) {
-            console.log(err);
-            return null;
-        }
+        return await prisma.user.findUnique({
+            where: {
+                username: username
+            }
+        });
     }
 
-    static async createUser(name: string, username: string, password: string): Promise<User | null> {
+    static async createUser(name: string, username: string, password: string): Promise<User> {
+        const hashedPassword = await this.hashPassword(password);
         try {
-            const hashedPassword = await this.hashPassword(password);
             const user = await prisma.user.create({
                 data: {
                     name: name,
@@ -59,33 +52,29 @@ export class AuthService {
                 }
             });
             return user;
-        } catch (err) {
-            console.log(err);
-            return null;
+        } catch (err: any) {
+            // Postgres return error code P2002 for uniuqe constraint violation
+            if (err.code === "P2002") {
+                throw new AppError(409, "User already exists");
+            }
+            throw err;
         }
     }
 
-    static async createToken(userId: string): Promise<string | null> {
-        try {
-            const JWT_SECRET = process.env.JWT_SECRET;
-            if (!JWT_SECRET) {
-                console.log("JWT_SECRET not defined");
-                return null;
-            }
-            const secret = new TextEncoder().encode(JWT_SECRET);
-
-            const token = await new SignJWT({})
-                .setProtectedHeader({ alg: "HS256" })
-                .setSubject(userId)
-                .setIssuedAt()
-                .setExpirationTime("1d")
-                .sign(secret);
-
-            return token;
-        } catch (err) {
-            console.log(err);
-            return null;
+    static async createToken(userId: string): Promise<string> {
+        const JWT_SECRET = process.env.JWT_SECRET;
+        if (!JWT_SECRET) {
+            throw new AppError(500, "JWT_SECRET is not configured")
         }
+
+        const secret = new TextEncoder().encode(JWT_SECRET);
+
+        return await new SignJWT({})
+            .setProtectedHeader({ alg: "HS256" })
+            .setSubject(userId)
+            .setIssuedAt()
+            .setExpirationTime("1d")
+            .sign(secret);
     }
 }
 

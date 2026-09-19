@@ -11,7 +11,8 @@ export const loginSchema = z.object({
     password: z.string().min(8).max(64)
 });
 
+export const updateUsernameSchema = signupSchema.pick({ username: true });
+
 export type SignupSchema = z.infer<typeof signupSchema>;
 export type LoginSchema = z.infer<typeof loginSchema>;
-
-
+export type UpdateUsernameSchema = z.infer<typeof updateUsernameSchema>;
