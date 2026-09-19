@@ -4,6 +4,31 @@ import { AppError } from "../utils/AppError.js"
 
 export class RequestService {
 
+    private static async createConversation(requestId: string, user1Id: string, user2Id: string) {
+        return await prisma.$transaction(async (tx) => {
+            const conversation = await tx.conversation.create({
+                data: {
+                    type: "DM",
+                    member: {
+                        create: [
+                            { userId: user1Id },
+                            { userId: user2Id },
+                        ]
+                    }
+                }
+            });
+
+            await tx.chatRequest.delete({
+                where: { id: requestId }
+            });
+
+            return {
+                status: "ACCEPTED",
+                conversationId: conversation.id,
+            };
+        });
+    }
+
     static async sendRequest(currentUserId: string, targetUsername: string, message?: string) {
 
         // find if the target user exists
@@ -46,31 +71,11 @@ export class RequestService {
         })
 
         if (existingRequest) {
-            const acceptRequest = await prisma.$transaction(async (tx) => {
-                // create new conversation and add both user ans their member
-                const conversation = await tx.conversation.create({
-                    data: {
-                        type: "DM",
-                        member: {
-                            create: [
-                                { userId: currentUserId },
-                                { userId: targetUser.id },
-                            ]
-                        }
-                    }
-                })
-
-                await tx.chatRequest.delete({
-                    where: { id: existingRequest.id }
-                });
-
-                return {
-                    status: "ACCEPTED",
-                    conversationId: conversation.id,
-                };
-            });
-
-            return acceptRequest;
+            return await this.createConversation(
+                existingRequest.id,
+                currentUserId,
+                targetUser.id
+            );
         }
 
         const firstRequestExist = await prisma.chatRequest.findFirst({
@@ -104,5 +109,98 @@ export class RequestService {
             status: "PENDING",
             request
         };
+    }
+
+    static async getIncomingRequest(userId: string) {
+
+        const requests = await prisma.chatRequest.findMany({
+            where: { receiverId: userId, status: "PENDING" },
+            select: {
+                id: true,
+                message: true,
+                createdAt: true,
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        avatarType: true,
+                        avatarUrl: true,
+                    }
+                }
+            }
+        })
+        return requests;
+    }
+
+    static async getOutgoingRequest(userId: string) {
+
+        const requests = await prisma.chatRequest.findMany({
+            where: { senderId: userId, status: "PENDING" },
+            select: {
+                id: true,
+                message: true,
+                createdAt: true,
+                receiver: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        avatarType: true,
+                        avatarUrl: true,
+                    }
+                }
+            }
+        })
+        return requests;
+    }
+
+    static async acceptRequest(requestId: string, currentUserId: string) {
+
+        const request = await prisma.chatRequest.findUnique({
+            where: { id: requestId },
+        })
+
+        if (!request) {
+            throw new AppError(404, "Request not found");
+        }
+
+        if (request.receiverId !== currentUserId) {
+            throw new AppError(403, "Not authorized to accept this request");
+        }
+
+        if (request.status !== "PENDING") {
+            throw new AppError(400, "Request is not pending");
+        }
+
+        return await this.createConversation(
+            request.id,
+            currentUserId,
+            request.senderId
+        );
+    }
+
+    static async rejectRequest(requestId: string, currentUserId: string) {
+        const request = await prisma.chatRequest.findUnique({
+            where: { id: requestId },
+        })
+
+        if (!request) {
+            throw new AppError(404, "Request not found");
+        }
+
+        if (request.receiverId !== currentUserId) {
+            throw new AppError(403, "Not authorized to reject this request");
+        }
+
+        if (request.status !== "PENDING") {
+            throw new AppError(400, "Request is not pending");
+        }
+
+        await prisma.chatRequest.delete({
+            where: { id: requestId },
+        })
+
+        return { message: "Chat request rejected" }
     }
 }
