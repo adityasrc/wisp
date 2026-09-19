@@ -36,7 +36,24 @@ export class UsersController {
 
         const message = "Username updated successfully";
         return res.status(200).json({ message, user: updateUser });
+    }
 
+    static async searchUser(req: Request, res: Response) {
+        const q = req.query.q;
+
+        // return empty array if no search username provided
+        if (!q || typeof q !== "string" || q.trim() === "") {
+            return res.status(200).json([]);
+        }
+
+        const userId = req.user?.id;
+        if (!userId) {
+            throw new AppError(401, "Unauthorized");
+        }
+
+        const users = await UsersService.getUsers(q.trim(), userId);
+
+        return res.status(200).json({ users });
 
     }
 }

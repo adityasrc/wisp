@@ -121,4 +121,27 @@ export class UsersService {
             return updatedUser;
         });
     }
+
+    static async getUsers(search: string, currentUserId: string) {
+
+        return await prisma.user.findMany({
+            where: {
+                username: {
+                    contains: search,
+                    mode: 'insensitive',
+                },
+                id: {
+                    not: currentUserId,
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                avatarType: true,
+                avatarUrl: true,
+            },
+            take: 10,
+        })
+    }
 }

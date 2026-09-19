@@ -30,7 +30,7 @@ export class AuthService {
                 expiresAt: { gt: new Date() }
             }
         });
-        return !!reserved;
+        return !!reserved; // converts value into boolean
     }
 
     static async getUser(username: string): Promise<User | null> {
