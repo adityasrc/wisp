@@ -6,6 +6,7 @@ import chatRoutes from "./routes/chat.js";
 import userRoutes from "./routes/userRoutes.js";
 import cookieParser from "cookie-parser";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import requestRoutes from "./routes/request.js";
 
 
 app.use(cors());
@@ -17,6 +18,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/chats", chatRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/requests", requestRoutes);
 app.use(errorMiddleware);
 
 app.listen(3001, () => {
