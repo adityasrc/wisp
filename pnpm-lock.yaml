@@ -121,9 +121,18 @@ importers:
 
   apps/ws-backend:
     dependencies:
+      '@repo/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/database
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       ws:
         specifier: ^8.21.3
         version: 8.21.3

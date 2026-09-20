@@ -22,8 +22,30 @@ export const editMessageSchema = z.object({
     content: z.string().min(1, "Message cannot be empty").max(2000, "Message cannot exceed 2000 characters").trim(),
 });
 
+export const sendMessageSchema = z.object({
+    conversationId: z.uuid("Invalid conversation ID"),
+    content: z.string().min(1, "Message cannot be empty").max(2000, "Message cannot exceed 2000 characters").trim(),
+    lifespan: z.enum(["NORMAL", "SENSITIVE"]).optional(),
+});
+
+export const editWsMessageSchema = z.object({
+    messageId: z.uuid("Invalid message ID"),
+    content: z.string().min(1, "Message cannot be empty").max(2000, "Message cannot exceed 2000 characters").trim(),
+});
+
+export const sendRequestSchema = requestSchema;
+
+export const respondRequestSchema = z.object({
+    requestId: z.uuid("Invalid request ID"),
+    action: z.enum(["ACCEPT", "REJECT"]),
+});
+
 export type SignupSchema = z.infer<typeof signupSchema>;
 export type LoginSchema = z.infer<typeof loginSchema>;
 export type UpdateUsernameSchema = z.infer<typeof updateUsernameSchema>;
 export type RequestSchema = z.infer<typeof requestSchema>;
 export type EditMessageSchema = z.infer<typeof editMessageSchema>;
+export type SendMessageSchema = z.infer<typeof sendMessageSchema>;
+export type EditWsMessageSchema = z.infer<typeof editWsMessageSchema>;
+export type SendRequestSchema = z.infer<typeof sendRequestSchema>;
+export type RespondRequestSchema = z.infer<typeof respondRequestSchema>;
