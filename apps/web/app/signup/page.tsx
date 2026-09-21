@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-
+import { useRouter } from 'next/navigation';
 
 
 export default function Signup() {
+    const router = useRouter();
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -13,9 +14,10 @@ export default function Signup() {
 
         try {
             const response = await fetch("http://localhost:3001/api/v1/auth/register", {
-                method: 'POST',
+                method: "POST",
+                credentials: "include",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 }, body: JSON.stringify({
                     name,
                     username,
@@ -24,7 +26,12 @@ export default function Signup() {
             })
 
             const data = await response.json();
-            console.log(data.message);
+            if (response.ok) {
+                router.push("/chats");
+            } else {
+                console.log(data.message);
+            }
+
         } catch (err) {
             console.log("Signup Failed");
         }
