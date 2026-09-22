@@ -124,7 +124,6 @@ export async function handleSendRequest(userId: string, payload: SendRequestPayl
         include: {
             sender: {
                 select: {
-                    name: true,
                     username: true,
                     avatarType: true,
                     avatarUrl: true,

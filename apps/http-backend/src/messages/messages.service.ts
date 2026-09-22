@@ -43,7 +43,6 @@ export class MessageService {
                 sender: {
                     select: {
                         id: true,
-                        name: true,
                         username: true,
                         avatarType: true,
                         avatarUrl: true,

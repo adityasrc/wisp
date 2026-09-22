@@ -52,7 +52,6 @@ export async function handleSendMessage(userId: string, payload: SendMessagePayl
             include: {
                 sender: {
                     select: {
-                        name: true,
                         username: true,
                         avatarType: true,
                         avatarUrl: true,
@@ -158,7 +157,6 @@ export async function handleEditMessage(userId: string, payload: EditMessagePayl
         include: {
             sender: {
                 select: {
-                    name: true,
                     username: true,
                     avatarType: true,
                     avatarUrl: true,

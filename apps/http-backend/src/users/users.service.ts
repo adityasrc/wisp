@@ -8,7 +8,6 @@ export class UsersService {
             where: { id: userId },
             select: {
                 id: true,
-                name: true,
                 username: true,
                 bio: true,
                 avatarType: true,
@@ -110,7 +109,6 @@ export class UsersService {
                 },
                 select: {
                     id: true,
-                    name: true,
                     username: true,
                     bio: true,
                     avatarType: true,
@@ -136,7 +134,6 @@ export class UsersService {
             },
             select: {
                 id: true,
-                name: true,
                 username: true,
                 avatarType: true,
                 avatarUrl: true,

@@ -22,7 +22,6 @@ export class ConversationService {
                         user: {
                             select: {
                                 id: true,
-                                name: true,
                                 username: true,
                                 avatarType: true,
                                 avatarUrl: true,
@@ -74,7 +73,6 @@ export class ConversationService {
                     include: {
                         user: {
                             select: {
-                                name: true,
                                 username: true,
                                 avatarType: true,
                                 avatarUrl: true,
@@ -130,7 +128,6 @@ export class ConversationService {
                 sender: {
                     select: {
                         id: true,
-                        name: true,
                         username: true,
                         avatarType: true,
                         avatarUrl: true,

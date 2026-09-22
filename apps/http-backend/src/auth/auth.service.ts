@@ -41,12 +41,11 @@ export class AuthService {
         });
     }
 
-    static async createUser(name: string, username: string, password: string): Promise<User> {
+    static async createUser(username: string, password: string): Promise<User> {
         const hashedPassword = await this.hashPassword(password);
         try {
             const user = await prisma.user.create({
                 data: {
-                    name: name,
                     username: username,
                     password: hashedPassword
                 }

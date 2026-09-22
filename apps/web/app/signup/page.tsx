@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 
 export default function Signup() {
     const router = useRouter();
-    const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+        setLoading(true)
+        setError("");
         e.preventDefault();
 
         try {
@@ -19,7 +22,6 @@ export default function Signup() {
                 headers: {
                     "Content-Type": "application/json",
                 }, body: JSON.stringify({
-                    name,
                     username,
                     password
                 })
@@ -30,10 +32,14 @@ export default function Signup() {
                 router.push("/chats");
             } else {
                 console.log(data.message);
+                setError(data.message)
             }
 
         } catch (err) {
             console.log("Signup Failed");
+            setError("Something went wrong");
+        } finally {
+            setLoading(false);
         }
 
     }
@@ -44,10 +50,6 @@ export default function Signup() {
             <br></br>
 
             <form onSubmit={handleSubmit}>
-                <label htmlFor="name">Enter your name</label>
-                <br></br>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ankur Kashyap" />
-                <br></br><br></br>
                 <label htmlFor="username">Enter your username</label>
                 <br></br>
                 <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ankurkashyap" />
@@ -57,7 +59,8 @@ export default function Signup() {
                 <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" />
                 <br></br>
                 <br></br>
-                <button type="submit">Submit</button>
+                {error && <p>{error}</p>}
+                <button type="submit" disabled={loading}>{loading ? "Creating Account..." : "Sign up"}</button>
 
             </form>
         </>

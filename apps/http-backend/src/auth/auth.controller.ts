@@ -13,13 +13,13 @@ export class AuthController {
             throw new AppError(400, message);
         }
 
-        const { name, username, password } = parsedData.data;
+        const { username, password } = parsedData.data;
 
         if (await AuthService.userExist(username)) {
             throw new AppError(409, "User already exists");
         }
 
-        const user = await AuthService.createUser(name, username, password);
+        const user = await AuthService.createUser(username, password);
         if (!user) {
             throw new AppError(500, "Signup Failed");
         }
@@ -41,7 +41,6 @@ export class AuthController {
             message,
             user: {
                 id: user.id,
-                name: user.name,
                 username: user.username
             }
         });
@@ -84,7 +83,6 @@ export class AuthController {
             message: "Logged in successfully",
             user: {
                 id: user.id,
-                name: user.name,
                 username: user.username
             }
         });

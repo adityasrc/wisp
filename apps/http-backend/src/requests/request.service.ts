@@ -122,7 +122,6 @@ export class RequestService {
                 sender: {
                     select: {
                         id: true,
-                        name: true,
                         username: true,
                         avatarType: true,
                         avatarUrl: true,
@@ -144,7 +143,6 @@ export class RequestService {
                 receiver: {
                     select: {
                         id: true,
-                        name: true,
                         username: true,
                         avatarType: true,
                         avatarUrl: true,
