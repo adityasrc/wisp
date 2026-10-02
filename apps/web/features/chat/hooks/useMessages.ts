@@ -5,6 +5,7 @@ export function useMessages() {
     const [messages, setMessages] = useState<any[]>([]);
     const [messageText, setMessageText] = useState<string>("");
 
+    // fetch message history for the selected conversation
     const fetchMessages = useCallback(async (conversationId: string) => {
         try {
             const data = await apiClient(`/api/v1/conversations/${conversationId}/messages`);
@@ -15,6 +16,7 @@ export function useMessages() {
         }
     }, []);
 
+    // send message over websocket to be saved and broadcasted by ws-backend
     const sendMessage = useCallback((conversationId: string, socket: WebSocket | null, content: string) => {
         if (!socket || !content.trim()) return;
 
@@ -27,9 +29,11 @@ export function useMessages() {
                 },
             })
         );
+        // clear input field after sending
         setMessageText("");
     }, []);
 
+    // append new incoming message to currently displayed conversation
     const appendMessage = useCallback((newMsg: any) => {
         setMessages((prev) => [...prev, newMsg]);
     }, []);

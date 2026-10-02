@@ -17,6 +17,7 @@ export default function Chats() {
     const [loading, setLoading] = useState<boolean>(true);
     const [user, setUser] = useState<any>(null);
 
+    // sidebar conversation state and helpers
     const {
         conversations,
         selectedConversation,
@@ -25,6 +26,7 @@ export default function Chats() {
         updateLastMessage,
     } = useConversations();
 
+    // active chat messages and send handler
     const {
         messages,
         messageText,
@@ -34,6 +36,7 @@ export default function Chats() {
         appendMessage,
     } = useMessages();
 
+    // friend requests hook, pass fetchConversation so accepting auto-updates chat list
     const {
         incomingRequests,
         fetchIncomingRequests,
@@ -42,24 +45,30 @@ export default function Chats() {
         addIncomingRequest,
     } = useRequests(fetchConversation);
 
+    // real-time ws listeners wired to our hook actions
     const { socket } = useWebSocket({
         user,
         onMessageNew: (newMsg) => {
+            // append message only if it belongs to currently open chat
             if (newMsg.conversationId === selectedConversation?.id) {
                 appendMessage(newMsg);
             }
+            // update preview snippet in sidebar
             updateLastMessage(newMsg.conversationId, newMsg.content);
         },
         onRequestReceived: (req) => {
+            // someone sent us a request, show in incoming list
             addIncomingRequest(req);
         },
         onRequestAccepted: () => {
+            // request accepted, refresh both requests and conversation list
             fetchConversation();
             fetchIncomingRequests();
         },
         onError: (err) => alert(err),
     });
 
+    // auth check on mount, redirect to login if session cookie is missing or invalid
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -91,8 +100,8 @@ export default function Chats() {
 
             <RequestsList
                 requests={incomingRequests}
-                onAccept={acceptRequest}
-                onReject={rejectRequest}
+                onAccept={(id) => acceptRequest(id, socket)}
+                onReject={(id) => rejectRequest(id, socket)}
             />
 
             <ConversationList

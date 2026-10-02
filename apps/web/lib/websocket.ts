@@ -17,7 +17,7 @@ export function useWebSocket({
 }: UseWebSocketOptions) {
     const [socket, setSocket] = useState<WebSocket | null>(null);
 
-    // refs avoid stale closures in socket event handlers
+    // refs avoid stale closures in socket event handlers without reconnecting ws on re-renders
     const handlersRef = useRef({
         onMessageNew,
         onRequestReceived,
@@ -25,6 +25,7 @@ export function useWebSocket({
         onError,
     });
 
+    // keep callbacks fresh on every render
     useEffect(() => {
         handlersRef.current = {
             onMessageNew,
@@ -34,6 +35,7 @@ export function useWebSocket({
         };
     });
 
+    // connect to ws only when user is authenticated
     useEffect(() => {
         if (!user) return;
 
@@ -48,6 +50,7 @@ export function useWebSocket({
             console.error("WS error: ", err);
         };
 
+        // dispatch incoming ws events to current callbacks
         ws.onmessage = (e) => {
             try {
                 const data = JSON.parse(e.data);
@@ -67,6 +70,7 @@ export function useWebSocket({
             }
         };
 
+        // cleanup connection on logout or unmount
         return () => {
             ws.close();
         };

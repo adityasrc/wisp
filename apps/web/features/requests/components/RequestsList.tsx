@@ -1,5 +1,7 @@
+import { IncomingRequest } from "../hooks/useRequests";
+
 interface RequestsListProps {
-    requests: any[];
+    requests: IncomingRequest[];
     onAccept: (id: string) => void;
     onReject: (id: string) => void;
 }

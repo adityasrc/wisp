@@ -5,6 +5,7 @@ export function useConversations() {
     const [conversations, setConversations] = useState<any[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<any>(null);
 
+    // load conversations list for sidebar
     const fetchConversation = useCallback(async () => {
         try {
             const data = await apiClient("/api/v1/conversations");
@@ -14,6 +15,7 @@ export function useConversations() {
         }
     }, []);
 
+    // update message preview snippet in sidebar when new message arrives
     const updateLastMessage = useCallback((conversationId: string, content: string) => {
         setConversations((prev) =>
             prev.map((convo) =>
